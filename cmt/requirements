@@ -1,0 +1,45 @@
+package captChanInfo
+# This package provides the mapping between electronics channels and
+# the geometry objects.  This is required by all of the software to
+# map DAQ files into calibrated files, so it must be kept stable.  As
+# much as possible, backward compatibility must be maintained.  Please
+# contact the package manager before making changes.  In particular,
+# contact the package manager before designing (or especially
+# implementing) any structural changes so we can make sure that all of
+# the impacts of the change are understood by the entire group.  A new
+# stable version should be created before significant changes are
+# made.  Email enquiries should be directed to
+# captain-sw@simpa.lbl.gov.
+#
+author Clark McGrew <clark.mcgrew@stonybrook.edu>
+
+# This is required for the documentation.
+manager Clark McGrew <clark.mcgrew@stonybrook.edu>
+
+# The packages used by this one.  Only direct dependencies should be
+# included. 
+use captainPolicy 
+use testBase
+
+# Build the documentation.
+document doxygen doxygen -group=documentation *.cxx *.hxx ../doc/*.dox
+
+# The library to build
+library captChanInfo *.cxx *.hxx
+
+# Build information used by packages that use this one.
+macro captChanInfo_cppflags " -DCAPTCHANINFO_USED "
+macro captChanInfo_linkopts " -L$(CAPTCHANINFOROOT)/$(captChanInfo_tag) -lcaptChanInfo "
+macro captChanInfo_stamps " $(captChanInfostamp) $(linkdefstamp) "
+
+# The paths to find this library and it's executables
+path_remove LD_LIBRARY_PATH "$(CAPTCHANINFOROOT)" 
+path_prepend LD_LIBRARY_PATH "$(CAPTCHANINFOROOT)/$(captChanInfo_tag)"
+
+path_remove PATH "$(CAPTCHANINFOROOT)"
+path_prepend PATH "$(CAPTCHANINFOROOT)/$(captChanInfo_tag)" \
+      WIN32      "$(CAPTCHANINFOROOT)/$(captChanInfo_tag)" 
+
+# Test applications to build
+application captChanInfoTUT -check ../test/captChanInfoTUT.cxx ../test/tut*.cxx
+macro_append captChanInfoTUT_dependency " captChanInfo "
