@@ -18,8 +18,9 @@ public:
     static CP::TChannelInfo& Get(void);
 
     /// Set the event context to be used when mapping identifiers.  This
-    /// should be set before accessing the identifiers.
-    void SetContext(const CP::TEventContext& context) {fContext = context;}
+    /// should be set before accessing the identifiers.  This may trigger a
+    /// database access if the context is changing.
+    void SetContext(const CP::TEventContext& context);
 
     /// Get the event context being used for mapping identifiers.
     const CP::TEventContext& GetContext() const {return fContext;}
