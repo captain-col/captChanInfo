@@ -1,0 +1,7 @@
+/*! \mainpage The captChanInfo Package
+  
+  \section captChanInfo Translate channels to geometry objects
+
+Do the channel and geometry id translation.
+
+*/
