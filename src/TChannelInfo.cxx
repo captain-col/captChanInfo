@@ -26,15 +26,26 @@ void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
     fContext = context;
 }
 
+const CP::TEventContext& CP::TChannelInfo::GetContext() const {
+    if (fContext.IsValid()) return fContext;
+    CaptError("Event context must be set before using TChannelInfo.");
+    return fContext;
+}
+
 CP::TChannelId CP::TChannelInfo::GetChannel(CP::TGeometryId id, int index) {
     // At the moment, index is always zero.
     if (index != 0) return CP::TChannelId();
-    if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate geometry to channel");
-        return CP::TChannelId();
-    }
+
+    // Make sure that the identifier is valid.
     if (!id.IsValid()) {
         CaptError("Invalid geometry id cannot be translated to a channel");
+        return CP::TChannelId();
+    }
+
+    // Make sure that we know what the current context is.  The channel to
+    // geometry mapping changes with time.
+    if (!GetContext().IsValid()) {
+        CaptError("Need valid event context to translate geometry to channel");
         return CP::TChannelId();
     }
 
@@ -62,8 +73,6 @@ CP::TChannelId CP::TChannelInfo::GetChannel(CP::TGeometryId id, int index) {
         return CP::TChannelId();
     }
 
-    // Deal with the detector.
-
     CaptError("Geometry to Channel lookup not implemented for the detector.");
     
     return CP::TChannelId();
@@ -77,15 +86,20 @@ int CP::TChannelInfo::GetChannelCount(CP::TGeometryId id) {
 CP::TGeometryId CP::TChannelInfo::GetGeometry(CP::TChannelId i, int index) {
     // At the moment, index is always zero.
     if (index != 0) return CP::TGeometryId();
+
+    // Make sure that we have an event context since the channel to geometry
+    // mapping changes with time.
     if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate channel to geometry");
+        CaptWarn("Need valid event context to translate channel to geometry");
         return CP::TGeometryId();
     }
+
+    // Make sure this is a valid channel and flag an error if not.
     if (!i.IsValid()) {
         CaptError("Invalid channel cannot be translated to geometry");
         return CP::TGeometryId();
     }
-    
+
     // The current context is for the MC, so the channel can be generated
     // algorithmically.
     if (i.IsMCChannel()) {
@@ -107,9 +121,7 @@ CP::TGeometryId CP::TChannelInfo::GetGeometry(CP::TChannelId i, int index) {
         CaptError("Channel requested for invalid event context");
         return CP::TGeometryId();
     }
-
-    // Deal with the detector.
-
+    
     CaptError("Channel to Geometry lookup not implemented for the detector.");
     
     return CP::TGeometryId();

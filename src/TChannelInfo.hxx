@@ -22,8 +22,10 @@ public:
     /// database access if the context is changing.
     void SetContext(const CP::TEventContext& context);
 
-    /// Get the event context being used for mapping identifiers.
-    const CP::TEventContext& GetContext() const {return fContext;}
+    /// Get the event context being used for mapping identifiers.  If the
+    /// context has not been set explicitly, then it will try the value for
+    /// the current event.
+    const CP::TEventContext& GetContext() const;
 
     /// Map a geometry identifier into a channel identifier.  This takes an
     /// optional index for when there is more than one electronics channel per
