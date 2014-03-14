@@ -1,7 +1,11 @@
 /*! \mainpage The captChanInfo Package
   
-  \section captChanInfo Translate channels to geometry objects
+  \section captChanInfo Handle channel and geometry information.
 
-Do the channel and geometry id translation.
+This package provides mappings from channel to geometry and vice versa.  It
+also provides basic information about the channel and geometry layout.  The
+translation from channel to geometry (and back) is provided by the
+TChannelInfo class.  Basic geometry information is provided by the
+TGeometryInfo class. 
 
 */

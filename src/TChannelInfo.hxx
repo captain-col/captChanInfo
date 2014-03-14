@@ -11,7 +11,9 @@ namespace CP {
 
 /// A singleton class to translate between channel identifiers,
 /// CP::TChannelId(), and geometry identifiers, CP::TGeometryId().  This
-/// provides a two way map.
+/// provides a two way map.  To be used, the event context needs to have been
+/// set using the SetContext method.  Generally, SetContext() should be called
+/// when a new event is handled.  
 class CP::TChannelInfo {
 public:
     /// Return a reference to the singleton.
@@ -19,7 +21,9 @@ public:
 
     /// Set the event context to be used when mapping identifiers.  This
     /// should be set before accessing the identifiers.  This may trigger a
-    /// database access if the context is changing.
+    /// database access if the context is changing.  Explicitly setting the
+    /// context is required since this allows lookups even when an event is
+    /// not available.
     void SetContext(const CP::TEventContext& context);
 
     /// Get the event context being used for mapping identifiers.  If the
