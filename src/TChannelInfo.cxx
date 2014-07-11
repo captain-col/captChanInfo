@@ -58,10 +58,10 @@ CP::TChannelId CP::TChannelInfo::GetChannel(CP::TGeometryId id, int index) {
                 CP::GeomId::Captain::GetWirePlane(id),
                 CP::GeomId::Captain::GetWireNumber(id));
         }
-        else if (CP::GeomId::Captain::IsLightSensor(id)) {
+        else if (CP::GeomId::Captain::IsPhotosensor(id)) {
             return CP::TMCChannelId(
                 1, 0,
-                CP::GeomId::Captain::GetLightSensor(id));
+                CP::GeomId::Captain::GetPhotosensor(id));
         }
         return  CP::TChannelId();
     }
@@ -110,7 +110,7 @@ CP::TGeometryId CP::TChannelInfo::GetGeometry(CP::TChannelId i, int index) {
         }
         else if (id.GetType() == 1) {
             // This is a light sensor.
-            return CP::GeomId::Captain::LightSensor(id.GetNumber());
+            return CP::GeomId::Captain::Photosensor(id.GetNumber());
         }
         return  CP::TGeometryId();
     }
