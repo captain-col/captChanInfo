@@ -5,6 +5,8 @@
 #include <TChannelId.hxx>
 #include <TGeometryId.hxx>
 
+#include <map>
+
 namespace CP {
     class TChannelInfo;
 };
@@ -67,5 +69,11 @@ private:
     /// The event context to be used to map identifiers
     CP::TEventContext fContext;
 
+    /// The map from channel to geometry.
+    std::map<CP::TChannelId,CP::TGeometryId> fChannelMap;
+
+    /// The map from geometry object to channel.
+    std::map<CP::TGeometryId,CP::TChannelId> fGeometryMap;
+    
 };
 #endif
