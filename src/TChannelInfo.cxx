@@ -6,6 +6,13 @@
 #include <TMCChannelId.hxx>
 #include <TTPCChannelId.hxx>
 #include <TGeometryId.hxx>
+#include <TCaptLog.hxx>
+
+#include <TTPC_Wire_Channel_Table.hxx>
+#include <TTPC_Wire_Geometry_Table.hxx>
+
+#include <TResultSetHandle.hxx>
+#include <DatabaseUtils.hxx>
 
 #include <TSystem.h>
 
@@ -113,8 +120,54 @@ CP::TChannelInfo::TChannelInfo() {
 }
 
 void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
+    if (context == fContext) return;
+
     // This needs to check if a new mapping needs to be loaded.
     fContext = context;
+    CaptInfo("TChannelInfo context: " << context);
+    
+    // Get the channel table.
+    CP::TResultSetHandle<CP::TTPC_Wire_Channel_Table> chanTable(context);
+    Int_t numChannels(chanTable.GetNumRows());
+
+    // Get the geometry table.
+    CP::TResultSetHandle<CP::TTPC_Wire_Geometry_Table> geomTable(context);
+    Int_t numGeometries(geomTable.GetNumRows());
+
+    if (numChannels == 0 || numGeometries == 0) {
+        if (numChannels == 0) {
+            CaptError("Missing channel table for " << context);
+        }
+        if (numGeometries == 0) {
+            CaptError("Missing geometry table for " << context);
+        }
+        return;
+    }
+
+    CaptLog("Query at " 
+            << context
+            << ": result set contains "
+            << numChannels << " channels"
+            << " and " << numGeometries << " wires");
+    for (int i = 0; i<numChannels; ++i) {
+        const CP::TTPC_Wire_Channel_Table* chanRow = chanTable.GetRow(i);
+        if (!chanRow) {
+            CaptError("Missing channel row " << i);
+            continue;
+        }
+        CP::TChannelId chanId = chanRow->GetChannelId();
+        int wire = chanRow->GetWire();
+        const CP::TTPC_Wire_Geometry_Table* geomRow 
+            = geomTable.GetRowByIndex(wire);
+        if (!geomRow) {
+            CaptError("Missing geometry row " << wire);
+        }
+        CP::TGeometryId geomId =  geomRow->GetGeometryId();
+
+        fChannelMap[chanId] = geomId;
+        fGeometryMap[geomId] = chanId;
+
+    }
 }
 
 const CP::TEventContext& CP::TChannelInfo::GetContext() const {
@@ -170,7 +223,7 @@ CP::TChannelId CP::TChannelInfo::GetChannel(CP::TGeometryId gid, int index) {
         = fGeometryMap.find(gid);
 
     if (geometryEntry == fGeometryMap.end()) {
-        CaptError("Channel for object not found: " << gid);
+        CaptWarn("Channel for object not found: " << gid);
         return CP::TChannelId();
     }
         
@@ -218,7 +271,7 @@ CP::TGeometryId CP::TChannelInfo::GetGeometry(CP::TChannelId cid, int index) {
     // detector.  This shouldn't never happen, but it might.
 #ifdef CHECK_DETECTOR_CONTEXT
     if (!GetContext().IsDetector()) {
-        CaptError("Channel requested for invalid event context");
+        CaptWarn("Channel requested for invalid event context");
         return CP::TGeometryId();
     }
 #endif
@@ -227,7 +280,7 @@ CP::TGeometryId CP::TChannelInfo::GetGeometry(CP::TChannelId cid, int index) {
         = fChannelMap.find(cid);
 
     if (channelEntry == fChannelMap.end()) {
-        CaptError("Geometry for channel is not found: " << cid);
+        CaptWarn("Geometry for channel is not found: " << cid);
         return CP::TGeometryId();
     }
         
