@@ -25,7 +25,7 @@ CP::TChannelInfo* CP::TChannelInfo::fChannelInfo = NULL;
 
 CP::TChannelInfo& CP::TChannelInfo::Get() {
     if (!fChannelInfo) {
-        CaptVerbose("Create a new CP::TChannelInfo object");
+        CaptLog("Create a new CP::TChannelInfo object");
         fChannelInfo = new CP::TChannelInfo();
     }
     return *fChannelInfo;
@@ -120,11 +120,24 @@ CP::TChannelInfo::TChannelInfo() {
 }
 
 void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
-    if (context == fContext) return;
+
+    if (context == fContext) {
+        CaptNamedInfo("TChannelInfo","context: " << context << " (no change)");
+        return;
+    }
 
     // This needs to check if a new mapping needs to be loaded.
     fContext = context;
-    CaptInfo("TChannelInfo context: " << context);
+    CaptNamedInfo("TChannelInfo","context: " << context << " (change)");
+
+    if (!fContext.IsValid()) {
+        CaptError("New event context is not valid: " << context);
+        return;
+    }
+    
+    if (fContext.IsMC()) {
+        return;
+    }
     
     // Get the channel table.
     CP::TResultSetHandle<CP::TTPC_Wire_Channel_Table> chanTable(context);
@@ -189,7 +202,8 @@ CP::TChannelId CP::TChannelInfo::GetChannel(CP::TGeometryId gid, int index) {
     // Make sure that we know what the current context is.  The channel to
     // geometry mapping changes with time.
     if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate geometry to channel");
+        CaptError("Need valid event context to translate geometry to channel: "
+                  << GetContext());
         return CP::TChannelId();
     }
 
