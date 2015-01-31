@@ -1,2 +1,15 @@
 /*! \page captChanInfoHistory History for the captChanInfo Package 
+
+\section captChanInfo_v0r0p0_history Version 0.0.0
+
+Freeze information:
+   - Freeze Date: Sat Jan 31 18:18:31 2015
+   - Freeze User: mcgrew
+   - Freeze Host: boxer 
+
+
+FIRST CAPTAIN FREEZE
+
+This defines the interface for determining the channel to geometry mapping.
+
 */
