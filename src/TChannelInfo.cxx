@@ -170,16 +170,18 @@ void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
         }
         CP::TChannelId chanId = chanRow->GetChannelId();
         int wire = chanRow->GetWire();
+        if (wire <= 0) continue;
         const CP::TTPC_Wire_Geometry_Table* geomRow 
             = geomTable.GetRowByIndex(wire);
         if (!geomRow) {
-            CaptError("Missing geometry row " << wire);
+            CaptError("Missing geometry row " << chanId
+                      << " --> " << wire );
+            continue;
         }
         CP::TGeometryId geomId =  geomRow->GetGeometryId();
 
         fChannelMap[chanId] = geomId;
         fGeometryMap[geomId] = chanId;
-
     }
 }
 
