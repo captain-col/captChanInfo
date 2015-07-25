@@ -328,9 +328,7 @@ int CP::TChannelInfo::GetWireFromChannel(CP::TChannelId cid, int index) {
     // The current context is for the MC, so the channel can be generated
     // algorithmically.
 	// need to add what to do for MC (this is unfinished, jieun, july25, 2015)
-  
 	//  if (GetContext().IsMC()) {
-  
 	//  }
     // The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
@@ -350,4 +348,3 @@ int CP::TChannelInfo::GetWireFromChannel(CP::TChannelId cid, int index) {
         
     return wireEntry->second;
 }
-

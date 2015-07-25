@@ -40,8 +40,8 @@ public:
     /// an example where each hit gets a different channel.
     CP::TChannelId GetChannel(CP::TGeometryId id, int index=0);
 
-    //Get the wire number from a TChannel cid
-	int GetWireFromChannel(CP::TChannelId id, int index=0);
+    ///Get the wire number from a TChannel cid
+	int GetWireFromChannel(CP::TChannelId cid, int index=0);
 
 	/// Get the number of electronics channels that map to a particular
     /// geometry identifier.
@@ -78,6 +78,7 @@ private:
     /// The map from geometry object to channel.
     std::map<CP::TGeometryId,CP::TChannelId> fGeometryMap;
     
+	/// The map from channel to wire number
 	std::map<CP::TChannelId, int> fChanneltoWireMap;
 };
 #endif
