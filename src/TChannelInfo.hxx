@@ -43,6 +43,9 @@ public:
     ///Get the wire number from a TChannel cid
 	int GetWireFromChannel(CP::TChannelId cid, int index=0);
 
+	///Get the TChannel cid from the wire number
+	CP::TChannelId GetChannel(int, int index=0);
+
 	/// Get the number of electronics channels that map to a particular
     /// geometry identifier.
     int GetChannelCount(CP::TGeometryId id);
@@ -80,5 +83,8 @@ private:
     
 	/// The map from channel to wire number
 	std::map<CP::TChannelId, int> fChanneltoWireMap;
+
+	///The map from wire number to channel 
+	std::map<int, CP::TChannelId> fWiretoChannelMap;
 };
 #endif

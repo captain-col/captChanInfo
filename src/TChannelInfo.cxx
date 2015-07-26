@@ -39,7 +39,7 @@ CP::TChannelInfo::TChannelInfo() {
 
     if (mapName.empty()) return;
 
-    // Attache the file to a stream.
+    // Attach the file to a stream.
     std::ifstream mapFile(mapName.c_str());
     std::string line;
     while (std::getline(mapFile,line)) {
@@ -183,6 +183,7 @@ void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
         fChannelMap[chanId] = geomId;
         fGeometryMap[geomId] = chanId;
 		fChanneltoWireMap[chanId] = wire;
+		fWiretoChannelMap[wire] = chanId;
     }
 }
 
@@ -313,24 +314,28 @@ int CP::TChannelInfo::GetGeometryCount(CP::TChannelId id) {
 int CP::TChannelInfo::GetWireFromChannel(CP::TChannelId cid, int index) {
     // At the moment, index is always zero.
     if (index != 0) return -1;
-    // Make sure that the identifier is valid.
+
+	// Make sure that the identifier is valid.
     if (!cid.IsValid()) {
         CaptError("Invalid channel id can not be translated to a wire number");
 		return -1;
     }
-    // Make sure that we know what the current context is.  The channel to
+    
+	// Make sure that we know what the current context is.  The channel to
     // geometry mapping changes with time.
     if (!GetContext().IsValid()) {
         CaptError("Need valid event context to translate channel id to wire number: "
                   << GetContext());
 		return -1;
     }
-    // The current context is for the MC, so the channel can be generated
+    
+	// The current context is for the MC, so the channel can be generated
     // algorithmically.
 	// need to add what to do for MC (this is unfinished, jieun, july25, 2015)
 	//  if (GetContext().IsMC()) {
 	//  }
-    // The context is valid, and not for the MC, so it should be for the
+    
+	// The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
 #ifdef CHECK_DETECTOR_CONTEXT
     if (!GetContext().IsDetector()) {
@@ -347,4 +352,48 @@ int CP::TChannelInfo::GetWireFromChannel(CP::TChannelId cid, int index) {
     }
         
     return wireEntry->second;
+}
+
+
+CP::TChannelId CP::TChannelInfo::GetChannel(int wirenumber, int index) {
+    // At the moment, index is always zero.
+    if (index != 0) return CP::TChannelId();
+    
+	// Make sure that the identifier is valid.
+    if (wirenumber == -1) {
+        CaptError("Invalid channel id can not be translated to a wire number");
+		return CP::TChannelId();
+    }
+    
+	// Make sure that we know what the current context is.  The channel to
+    // geometry mapping changes with time.
+    if (!GetContext().IsValid()) {
+        CaptError("Need valid event context to translate channel id to wire number: "
+                  << GetContext());
+		return CP::TChannelId();
+    }
+    
+	// The current context is for the MC, so the channel can be generated
+    // algorithmically.
+	// need to add what to do for MC (this is unfinished, jieun, july25, 2015)
+	//  if (GetContext().IsMC()) {
+	//  }
+    
+	// The context is valid, and not for the MC, so it should be for the
+    // detector.  This shouldn't never happen, but it might.
+#ifdef CHECK_DETECTOR_CONTEXT
+    if (!GetContext().IsDetector()) {
+        CaptError("Channel requested for invalid event context");
+        return CP::TChannelId();
+    }
+#endif
+
+    std::map<int,CP::TChannelId>::iterator channelEntry
+        = fWiretoChannelMap.find(wirenumber);
+    if (channelEntry == fWiretoChannelMap.end()) {
+        CaptWarn("Channel for object not found: " << wirenumber);
+		return CP::TChannelId();
+    }
+        
+    return channelEntry->second;
 }
