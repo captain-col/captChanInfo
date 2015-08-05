@@ -29,6 +29,10 @@ document doxygen doxygen -group=documentation *.cxx *.hxx ../doc/*.dox
 # The library to build
 library captChanInfo *.cxx *.hxx
 
+# Usefule applications
+application capt-channel ../app/captChannel.cxx
+macro_append capt-channel_dependency " captChanInfo "
+
 # Build information used by packages that use this one.
 macro captChanInfo_cppflags " -DCAPTCHANINFO_USED "
 macro captChanInfo_linkopts " -L$(CAPTCHANINFOROOT)/$(captChanInfo_tag) -lcaptChanInfo "

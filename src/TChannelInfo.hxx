@@ -67,6 +67,9 @@ public:
     /// geometry identifier.
     int GetGeometryCount(CP::TChannelId id);
 
+    /// Get the asic associated with a channel id
+    int GetASIC(CP::TChannelId id);
+    
 private: 
     /// The instance pointer
     static CP::TChannelInfo* fChannelInfo;
@@ -98,5 +101,9 @@ private:
     
     /// The map from geometry id to wire number.
     std::map<CP::TGeometryId, int> fGeometryToWireMap;
+
+    /// The map from channel id to asic channel.  The ASIC is encoded by
+    /// channel+1000*ASIC+1000*MB
+    std::map<CP::TChannelId, int> fChannelToASICMap;
 };
 #endif
