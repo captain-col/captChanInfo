@@ -40,13 +40,13 @@ public:
     /// an example where each hit gets a different channel.
     CP::TChannelId GetChannel(CP::TGeometryId id, int index=0);
 
-    ///Get the wire number from a TChannel cid
-	int GetWireFromChannel(CP::TChannelId cid, int index=0);
+    /// Get the TChannelId cid from the wire number
+    CP::TChannelId GetChannel(int, int index=0);
 
-	///Get the TChannel cid from the wire number
-	CP::TChannelId GetChannel(int, int index=0);
-
-	/// Get the number of electronics channels that map to a particular
+    /// Get the wire number from a TChannelId cid
+    int GetWireFromChannel(CP::TChannelId cid);
+    
+    /// Get the number of electronics channels that map to a particular
     /// geometry identifier.
     int GetChannelCount(CP::TGeometryId id);
 
@@ -55,8 +55,14 @@ public:
     /// geometry object.  An example of this might be a multi-hit tdc where
     /// each hit is recorded as a different channel.  The FNAL TripT chip is
     /// an example where each hit gets a different channel.
-    CP::TGeometryId GetGeometry(CP::TChannelId id, int index=0);
+    CP::TGeometryId GetGeometry(CP::TChannelId id);
 
+    /// Get the TGeometryId form the wire number.
+    CP::TGeometryId GetGeometry(int);
+
+    /// Get the wire number from the geometry id.
+    int GetWireFromGeometry(CP::TGeometryId id);
+    
     /// Get the number of electronics channels that map to a particular
     /// geometry identifier.
     int GetGeometryCount(CP::TChannelId id);
@@ -75,16 +81,22 @@ private:
     /// The event context to be used to map identifiers
     CP::TEventContext fContext;
 
-    /// The map from channel to geometry.
+    /// The map from channel id to geometry id.
     std::map<CP::TChannelId,CP::TGeometryId> fChannelMap;
 
-    /// The map from geometry object to channel.
+    /// The map from geometry id to channel id.
     std::map<CP::TGeometryId,CP::TChannelId> fGeometryMap;
     
-	/// The map from channel to wire number
-	std::map<CP::TChannelId, int> fChanneltoWireMap;
+    /// The map from channel id to wire number
+    std::map<CP::TChannelId, int> fChannelToWireMap;
+    
+    /// The map from wire number to channel id
+    std::map<int, CP::TChannelId> fWireToChannelMap;
 
-	///The map from wire number to channel 
-	std::map<int, CP::TChannelId> fWiretoChannelMap;
+    /// The map from wire number to geometry id.
+    std::map<int, CP::TGeometryId> fWireToGeometryMap;
+    
+    /// The map from geometry id to wire number.
+    std::map<CP::TGeometryId, int> fGeometryToWireMap;
 };
 #endif
