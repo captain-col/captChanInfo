@@ -90,12 +90,12 @@ int main(int argc, char** argv) {
 
     if (findWire) {
         if (referenceChannelId.IsValid()) {
-            int wire = channelInfo.GetWireFromChannel(referenceChannelId);
+            int wire = channelInfo.GetWireNumber(referenceChannelId);
             std::cout << wire << std::endl;
             exit(0);
         }
         if (referenceGeometryId.IsValid()) {
-            int wire = channelInfo.GetWireFromGeometry(referenceGeometryId);
+            int wire = channelInfo.GetWireNumber(referenceGeometryId);
             std::cout << wire << std::endl;
             exit(0);
         }
@@ -154,10 +154,12 @@ int main(int argc, char** argv) {
         else if (referenceGeometryId.IsValid()) {
             referenceChannelId = channelInfo.GetChannel(referenceGeometryId);
         }
+        int motherboard = channelInfo.GetMotherboard(referenceChannelId);
         int asic = channelInfo.GetASIC(referenceChannelId);
-        std::cout << "    MB: " << asic/1000/1000
-                  << " ASIC: " << (asic/1000) % 1000
-                  << " Chan: " << asic % 1000 << std::endl;
+        int asicChan = channelInfo.GetASICChannel(referenceChannelId);
+        std::cout << "    MB: " << motherboard
+                  << " ASIC: " << asic
+                  << " Chan: " << asicChan << std::endl;
     }
 
 }

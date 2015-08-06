@@ -305,46 +305,6 @@ CP::TChannelId CP::TChannelInfo::GetChannel(int wirenumber, int index) {
     return channelEntry->second;
 }
 
-int CP::TChannelInfo::GetWireFromChannel(CP::TChannelId cid) {
-    // Make sure that the identifier is valid.
-    if (!cid.IsValid()) {
-        CaptError("Invalid channel id can not be translated to a wire number");
-        return -1;
-    }
-    
-    // Make sure that we know what the current context is.  The channel to
-    // geometry mapping changes with time.
-    if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate channel id to wire number: "
-                  << GetContext());
-        return -1;
-    }
-    
-    // The current context is for the MC, so the channel can be generated
-    // algorithmically.
-    // need to add what to do for MC (this is unfinished, jieun, july25, 2015)
-    //  if (GetContext().IsMC()) {
-    //  }
-    
-    // The context is valid, and not for the MC, so it should be for the
-    // detector.  This shouldn't never happen, but it might.
-#ifdef CHECK_DETECTOR_CONTEXT
-    if (!GetContext().IsDetector()) {
-        CaptError("Channel requested for invalid event context");
-        return -1;
-    }
-#endif
-
-    std::map<CP::TChannelId, int>::iterator wireEntry
-        = fChannelToWireMap.find(cid);
-    if (wireEntry == fChannelToWireMap.end()) {
-        CaptWarn("Channel for object not found: " << cid);
-        return -1;
-    }
-        
-    return wireEntry->second;
-}
-
 int CP::TChannelInfo::GetChannelCount(CP::TGeometryId id) {
     if (!id.IsValid()) return 0;
     return 1;
@@ -439,7 +399,52 @@ CP::TGeometryId CP::TChannelInfo::GetGeometry(int wirenumber) {
     return geometryEntry->second;
 }
 
-int CP::TChannelInfo::GetWireFromGeometry(CP::TGeometryId gid) {
+int CP::TChannelInfo::GetGeometryCount(CP::TChannelId id) {
+    if (!id.IsValid()) return 0;
+    return 1;
+}
+
+int CP::TChannelInfo::GetWireNumber(CP::TChannelId cid) {
+    // Make sure that the identifier is valid.
+    if (!cid.IsValid()) {
+        CaptError("Invalid channel id can not be translated to a wire number");
+        return -1;
+    }
+    
+    // Make sure that we know what the current context is.  The channel to
+    // geometry mapping changes with time.
+    if (!GetContext().IsValid()) {
+        CaptError("Need valid event context to translate channel id to wire number: "
+                  << GetContext());
+        return -1;
+    }
+    
+    // The current context is for the MC, so the channel can be generated
+    // algorithmically.
+    // need to add what to do for MC (this is unfinished, jieun, july25, 2015)
+    //  if (GetContext().IsMC()) {
+    //  }
+    
+    // The context is valid, and not for the MC, so it should be for the
+    // detector.  This shouldn't never happen, but it might.
+#ifdef CHECK_DETECTOR_CONTEXT
+    if (!GetContext().IsDetector()) {
+        CaptError("Channel requested for invalid event context");
+        return -1;
+    }
+#endif
+
+    std::map<CP::TChannelId, int>::iterator wireEntry
+        = fChannelToWireMap.find(cid);
+    if (wireEntry == fChannelToWireMap.end()) {
+        CaptWarn("Channel for object not found: " << cid);
+        return -1;
+    }
+        
+    return wireEntry->second;
+}
+
+int CP::TChannelInfo::GetWireNumber(CP::TGeometryId gid) {
     // Make sure that the identifier is valid.
     if (!gid.IsValid()) {
         CaptError("Invalid geometry id can not be translated to a wire number");
@@ -479,11 +484,43 @@ int CP::TChannelInfo::GetWireFromGeometry(CP::TGeometryId gid) {
     return wireEntry->second;
 }
 
-int CP::TChannelInfo::GetGeometryCount(CP::TChannelId id) {
-    if (!id.IsValid()) return 0;
-    return 1;
-}
 
+int CP::TChannelInfo::GetMotherboard(CP::TChannelId cid) {
+    // Make sure that we have an event context since the channel to geometry
+    // mapping changes with time.
+    if (!GetContext().IsValid()) {
+        CaptWarn("Need valid event context to translate channel to geometry");
+        return -1;
+    }
+
+    // Make sure this is a valid channel and flag an error if not.
+    if (!cid.IsValid()) {
+        CaptError("Invalid channel cannot be translated to geometry");
+        return -1;
+    }
+
+    // The current context is for the MC, so the channel can be generated
+    // algorithmically.
+    if (cid.IsMCChannel()) {
+        return -1;
+    }
+    
+    // The context is valid, and not for the MC, so it should be for the
+    // detector.  This shouldn't never happen, but it might.
+    if (!GetContext().IsDetector()) {
+        CaptWarn("Channel requested for invalid event context");
+        return -1;
+    }
+
+    std::map<CP::TChannelId, int>::iterator channelEntry
+        = fChannelToASICMap.find(cid);
+
+    if (channelEntry == fChannelToASICMap.end()) {
+        return -1;
+    }
+        
+    return channelEntry->second/1000000;
+}
 
 int CP::TChannelInfo::GetASIC(CP::TChannelId cid) {
     // Make sure that we have an event context since the channel to geometry
@@ -507,12 +544,10 @@ int CP::TChannelInfo::GetASIC(CP::TChannelId cid) {
     
     // The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
-#ifdef CHECK_DETECTOR_CONTEXT
     if (!GetContext().IsDetector()) {
         CaptWarn("Channel requested for invalid event context");
-        return CP::TGeometryId();
+        return -1;
     }
-#endif
 
     std::map<CP::TChannelId, int>::iterator channelEntry
         = fChannelToASICMap.find(cid);
@@ -521,6 +556,43 @@ int CP::TChannelInfo::GetASIC(CP::TChannelId cid) {
         return -1;
     }
         
-    return channelEntry->second;
+    return (channelEntry->second/1000) % 1000;
+}
+
+int CP::TChannelInfo::GetASICChannel(CP::TChannelId cid) {
+    // Make sure that we have an event context since the channel to geometry
+    // mapping changes with time.
+    if (!GetContext().IsValid()) {
+        CaptWarn("Need valid event context to translate channel to geometry");
+        return -1;
+    }
+
+    // Make sure this is a valid channel and flag an error if not.
+    if (!cid.IsValid()) {
+        CaptError("Invalid channel cannot be translated to geometry");
+        return -1;
+    }
+
+    // The current context is for the MC, so the channel can be generated
+    // algorithmically.
+    if (cid.IsMCChannel()) {
+        return -1;
+    }
+    
+    // The context is valid, and not for the MC, so it should be for the
+    // detector.  This shouldn't never happen, but it might.
+    if (!GetContext().IsDetector()) {
+        CaptWarn("Channel requested for invalid event context");
+        return -1;
+    }
+
+    std::map<CP::TChannelId, int>::iterator channelEntry
+        = fChannelToASICMap.find(cid);
+
+    if (channelEntry == fChannelToASICMap.end()) {
+        return -1;
+    }
+        
+    return channelEntry->second % 1000;
 }
 

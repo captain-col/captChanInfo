@@ -4,6 +4,7 @@
 #include <TEventContext.hxx>
 #include <TChannelId.hxx>
 #include <TGeometryId.hxx>
+#include <method_deprecated.hxx>
 
 #include <map>
 
@@ -15,7 +16,7 @@ namespace CP {
 /// CP::TChannelId(), and geometry identifiers, CP::TGeometryId().  This
 /// provides a two way map.  To be used, the event context needs to have been
 /// set using the SetContext method.  Generally, SetContext() should be called
-/// when a new event is handled.  
+/// when a new event is handled.
 class CP::TChannelInfo {
 public:
     /// Return a reference to the singleton.
@@ -43,9 +44,6 @@ public:
     /// Get the TChannelId cid from the wire number
     CP::TChannelId GetChannel(int, int index=0);
 
-    /// Get the wire number from a TChannelId cid
-    int GetWireFromChannel(CP::TChannelId cid);
-    
     /// Get the number of electronics channels that map to a particular
     /// geometry identifier.
     int GetChannelCount(CP::TGeometryId id);
@@ -60,15 +58,42 @@ public:
     /// Get the TGeometryId form the wire number.
     CP::TGeometryId GetGeometry(int);
 
-    /// Get the wire number from the geometry id.
-    int GetWireFromGeometry(CP::TGeometryId id);
-    
     /// Get the number of electronics channels that map to a particular
     /// geometry identifier.
     int GetGeometryCount(CP::TChannelId id);
 
-    /// Get the asic associated with a channel id
+    /// Get the wire number around the outside of the TPC from a TChannelId
+    /// cid.  The wire number sequentially orders the wires and is related to
+    /// how the TPC is constructed.  It's mostly used when working on the
+    /// hardware since it can be fairly easily determined from the external
+    /// layout of the cryostat.
+    int GetWireNumber(CP::TChannelId cid);
+    
+    /// Get the wire number from the geometry id.  The wire number
+    /// sequentially orders the wires and is related to how the TPC is
+    /// constructed.  It's mostly used when working on the
+    /// hardware since it can be fairly easily determined from the external
+    /// layout of the cryostat.
+    int GetWireNumber(CP::TGeometryId id);
+
+    /// Get the cold motherboard associated with a channel id.
+    int GetMotherboard(CP::TChannelId id);
+
+    /// Get the cold ASIC associated with the channel id.
     int GetASIC(CP::TChannelId id);
+
+    /// Get the channel on the asic associated with the channel id.
+    int GetASICChannel(CP::TChannelId id);
+
+    /// Use GetWireNumber.
+    int GetWireFromChannel(CP::TChannelId cid) METHOD_DEPRECATED {
+        return GetWireNumber(cid);
+    }
+
+    /// Use GetWireNumber.
+    int GetWireFromGeometry(CP::TGeometryId id) METHOD_DEPRECATED {
+        return GetWireNumber(id);
+    }
     
 private: 
     /// The instance pointer

@@ -31,7 +31,7 @@ library captChanInfo *.cxx *.hxx
 
 # Usefule applications
 application capt-channel ../app/captChannel.cxx
-macro_append capt-channel_dependency " captChanInfo "
+apply_pattern dependency target=capt-channel depends=captChanInfo
 
 # Build information used by packages that use this one.
 macro captChanInfo_cppflags " -DCAPTCHANINFO_USED "
