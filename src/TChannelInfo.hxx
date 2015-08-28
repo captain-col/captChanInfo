@@ -85,12 +85,12 @@ public:
     /// Get the channel on the asic associated with the channel id.
     int GetASICChannel(CP::TChannelId id);
 
-    /// Use GetWireNumber.
+    /// DEPRECATED: Use GetWireNumber.
     int GetWireFromChannel(CP::TChannelId cid) METHOD_DEPRECATED {
         return GetWireNumber(cid);
     }
 
-    /// Use GetWireNumber.
+    /// DEPRECATED: Use GetWireNumber.
     int GetWireFromGeometry(CP::TGeometryId id) METHOD_DEPRECATED {
         return GetWireNumber(id);
     }
