@@ -162,13 +162,18 @@ void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
             CaptError("Missing channel row " << i);
             continue;
         }
+
         CP::TChannelId chanId = chanRow->GetChannelId();
         int wire = chanRow->GetWire();
         int mb = chanRow->GetMotherBoard();
         int asic = chanRow->GetASIC();
         int asicChan = chanRow->GetASICChannel();
-        
+        fChannelToASICMap[chanId] = mb*1000*1000 + asic*1000 + asicChan;
+
         if (wire <= 0) continue;
+        fChannelToWireMap[chanId] = wire;
+        fWireToChannelMap[wire] = chanId;
+
         const CP::TTPC_Wire_Geometry_Table* geomRow 
             = geomTable.GetRowByIndex(wire);
         if (!geomRow) {
@@ -177,12 +182,8 @@ void CP::TChannelInfo::SetContext(const CP::TEventContext& context) {
             continue;
         }
         CP::TGeometryId geomId =  geomRow->GetGeometryId();
-
         fChannelMap[chanId] = geomId;
         fGeometryMap[geomId] = chanId;
-        fChannelToWireMap[chanId] = wire;
-        fWireToChannelMap[wire] = chanId;
-        fChannelToASICMap[chanId] = mb*1000*1000 + asic*1000 + asicChan;
     }
 
     for (int i = 0; i<numGeometries; ++i) {

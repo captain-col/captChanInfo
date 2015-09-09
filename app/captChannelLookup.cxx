@@ -11,6 +11,27 @@
 #include <ctime>
 #include <string>
 
+void usage() {
+    std::cout << "Usage: capt-channel-lookup.exe <input option> <output option>"
+              << std::endl
+              << std::endl
+              << "     -C : Translate from electronics <crate>-<card>-<chan>"
+              << std::endl
+              << "     -G : Translate from geometry [uvx]-number"
+              << std::endl
+              << "     -W : Translate from tpc wire"
+              << std::endl
+              << "     -c : Translate to electronics <crate>-<card>-<chan>"
+              << std::endl
+              << "     -g : Translate to geometry"
+              << std::endl
+              << "     -w : Translate to wire"
+              << std::endl
+              << "     -a : translate to asic"
+              << std::endl;
+
+}
+
 int main(int argc, char** argv) {
     int runId = 4400;
     int eventId = 1;
@@ -28,9 +49,13 @@ int main(int argc, char** argv) {
     
     // Process the options.
     for (;;) {
-        int c = getopt(argc, argv, "C:G:W:acgw");
+        int c = getopt(argc, argv, "C:G:W:acgwh");
         if (c<0) break;
         switch (c) {
+        case 'h': {
+            usage();
+            exit(0);
+        }
         case 'C':
         {
             // Get a channel id  "m-a-c".  e.g. 1-4-11
@@ -75,7 +100,9 @@ int main(int argc, char** argv) {
         case 'g': findGeometryId = true; break;
         case 'w': findWire = true; break;
         default:
-            std::cout << "Invalid option" << std::endl; break;
+            std::cout << "Invalid option" << std::endl;
+            usage();
+            exit(-1);
         }
     }
 
@@ -160,6 +187,7 @@ int main(int argc, char** argv) {
         std::cout << "    MB: " << motherboard
                   << " ASIC: " << asic
                   << " Chan: " << asicChan << std::endl;
+        
     }
 
 }
