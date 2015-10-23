@@ -276,16 +276,19 @@ CP::TChannelId CP::TChannelInfo::GetChannel(int wirenumber, int index) {
     // Make sure that we know what the current context is.  The channel to
     // geometry mapping changes with time.
     if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate channel id to wire number: "
+        CaptError("Need valid event context to translate"
+                  << " channel id to wire number: "
                   << GetContext());
         return CP::TChannelId();
     }
     
     // The current context is for the MC, so the channel can be generated
     // algorithmically.
-    // need to add what to do for MC (this is unfinished, jieun, july25, 2015)
-    //  if (GetContext().IsMC()) {
-    //  }
+    if (GetContext().IsMC()) {
+        // There isn't a defined wire number for a MC channel, so you can't
+        // convert from wire to channel.
+        return CP::TChannelId();
+    }
     
     // The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
@@ -377,16 +380,19 @@ CP::TGeometryId CP::TChannelInfo::GetGeometry(int wirenumber) {
     
     // The current context is for the MC, so the channel can be generated
     // algorithmically.
-    // need to add what to do for MC (this is unfinished, jieun, july25, 2015)
-    //  if (GetContext().IsMC()) {
-    //  }
+    if (GetContext().IsMC()) {
+        // There isn't a defined wire number for a MC channel.  The MC wires
+        // are defined by the geometry position, not the position around the
+        // TPC frame.
+        return CP::TGeometryId();
+    }
     
     // The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
 #ifdef CHECK_DETECTOR_CONTEXT
     if (!GetContext().IsDetector()) {
         CaptError("Channel requested for invalid event context");
-        return CP::TChannelId();
+        return CP::TGeometryId();
     }
 #endif
 
@@ -415,21 +421,31 @@ int CP::TChannelInfo::GetWireNumber(CP::TChannelId cid) {
     // Make sure that we know what the current context is.  The channel to
     // geometry mapping changes with time.
     if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate channel id to wire number: "
+        CaptError("Need valid event context to translate"
+                  << " channel id to wire number: "
                   << GetContext());
         return -1;
     }
     
     // The current context is for the MC, so the channel can be generated
     // algorithmically.
-    // need to add what to do for MC (this is unfinished, jieun, july25, 2015)
-    //  if (GetContext().IsMC()) {
-    //  }
+    if (cid.IsMCChannel()) {
+#ifdef CHECK_MC_CONTEXT
+        if (GetContext().IsMC()) {
+            CaptError("Channel requested for invalid event context");
+            return -1;
+        }
+#endif
+        // There isn't a defined wire number for a MC channel.  The MC wires
+        // are defined by the geometry position, not the position around the
+        // TPC frame.
+        return -1;
+    }
     
     // The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
 #ifdef CHECK_DETECTOR_CONTEXT
-    if (!GetContext().IsDetector()) {
+    if (GetContext().IsDetector()) {
         CaptError("Channel requested for invalid event context");
         return -1;
     }
@@ -455,16 +471,20 @@ int CP::TChannelInfo::GetWireNumber(CP::TGeometryId gid) {
     // Make sure that we know what the current context is.  The channel to
     // geometry mapping changes with time.
     if (!GetContext().IsValid()) {
-        CaptError("Need valid event context to translate geometry id to wire number: "
+        CaptError("Need valid event context to translate"
+                  << " geometry id to wire number: "
                   << GetContext());
         return -1;
     }
     
     // The current context is for the MC, so the channel can be generated
     // algorithmically.
-    // need to add what to do for MC (this is unfinished, jieun, july25, 2015)
-    //  if (GetContext().IsMC()) {
-    //  }
+    if (GetContext().IsMC()) {
+        // There isn't a defined wire number for a MC channel.  The MC wires
+        // are defined by the geometry position, not the position around the
+        // TPC frame.
+        return -1;
+    }
     
     // The context is valid, and not for the MC, so it should be for the
     // detector.  This shouldn't never happen, but it might.
