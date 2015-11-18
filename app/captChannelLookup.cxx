@@ -17,15 +17,19 @@ void usage() {
               << std::endl
               << "     -C : Translate from electronics <crate>-<card>-<chan>"
               << std::endl
-              << "     -G : Translate from geometry [uvx]-number"
+              << "     -G : Translate from geometry [uvx]-<number>"
               << std::endl
-              << "     -W : Translate from tpc wire"
+              << "     -W : Translate from tpc <wire>"
+              << std::endl
+              << "     -I : Translate from DAQ <index> (not always accurate)"
               << std::endl
               << "     -c : Translate to electronics <crate>-<card>-<chan>"
               << std::endl
               << "     -g : Translate to geometry"
               << std::endl
               << "     -w : Translate to wire"
+              << std::endl
+              << "     -i : Translate to DAQ <index> (not always accurate)"
               << std::endl
               << "     -a : translate to asic"
               << std::endl;
@@ -49,7 +53,7 @@ int main(int argc, char** argv) {
     
     // Process the options.
     for (;;) {
-        int c = getopt(argc, argv, "C:G:W:acgwh");
+        int c = getopt(argc, argv, "C:G:I:W:acgiwh");
         if (c<0) break;
         switch (c) {
         case 'h': {
@@ -88,6 +92,33 @@ int main(int argc, char** argv) {
             referenceGeometryId = CP::GeomId::Captain::Wire(plane,wire);
             break;
         }
+        case 'I':
+        case 'i':
+        {
+            std::cout << "ERROR MESSAGE" << std::endl;
+            std::cout << "The DAQ channel index does not uniquely"
+                      << " specify a channel.  The index"
+                      << std::endl
+                      << "depends on which cards are are active,"
+                      << " but the active cards depend on the "
+                      << std::endl
+                      << "configuration of the DAQ which is not"
+                      << " available outside of an event record."
+                      << std::endl;
+            std::cout << std::endl
+                      << "Use crate, card, and channel instead."
+                      << "  These values are available in"
+                      << std::endl
+                      << "the DAQ record as "
+                      << std::endl
+                      << "      crate_header::getCrateNumber()"
+                      << std::endl
+                      << "      card_header::getModule()"
+                      << std::endl
+                      << "      channel::getChannelNumber()"
+                      << std::endl;
+            exit(-1);
+        }
         case 'W':
         {
             // Get a wire number
@@ -106,6 +137,20 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (!findWire && !findGeometryId && !findChannelId && !findASIC) {
+        std::cout << "Invalid options" << std::endl;
+        usage();
+        exit(-1);
+    }
+
+    if (referenceWire == -1
+        && !referenceGeometryId.IsValid() 
+        && !referenceChannelId.IsValid()) {
+        std::cout << "Invalid options" << std::endl;
+        usage();
+        exit(-1);
+    }
+    
     CP::TEventContext context;
     context.SetRun(runId);
     context.SetEvent(eventId);
@@ -118,12 +163,12 @@ int main(int argc, char** argv) {
     if (findWire) {
         if (referenceChannelId.IsValid()) {
             int wire = channelInfo.GetWireNumber(referenceChannelId);
-            std::cout << wire << std::endl;
+            std::cout << "    TPC Wire Number: " << wire << std::endl;
             exit(0);
         }
         if (referenceGeometryId.IsValid()) {
             int wire = channelInfo.GetWireNumber(referenceGeometryId);
-            std::cout << wire << std::endl;
+            std::cout << "    TPC Wire Number: " << wire << std::endl;
             exit(0);
         }
         std::cout << "Invalid inputs" << std::endl;
@@ -133,12 +178,12 @@ int main(int argc, char** argv) {
     if (findChannelId) {
         if (referenceWire != -1) {
             CP::TChannelId id = channelInfo.GetChannel(referenceWire);
-            std::cout << id << std::endl;
+            std::cout << "    Electronics Channel: " << id << std::endl;
             exit(0);
         }
         if (referenceGeometryId.IsValid()) {
             CP::TChannelId id = channelInfo.GetChannel(referenceGeometryId);
-            std::cout << id << std::endl;
+            std::cout << "    Electronics Channel: " << id << std::endl;
             exit(0);
         }
         std::cout << "Invalid inputs" << std::endl;
@@ -165,7 +210,7 @@ int main(int argc, char** argv) {
             std::cout << "Not a wire" << std::endl;
             exit(-1);
         }
-        std::cout << "    ";
+        std::cout << "    Location in Geometry: ";
         if (CP::GeomId::Captain::IsUWire(id)) std::cout << "U";
         if (CP::GeomId::Captain::IsVWire(id)) std::cout << "V";
         if (CP::GeomId::Captain::IsXWire(id)) std::cout << "X";
@@ -184,9 +229,9 @@ int main(int argc, char** argv) {
         int motherboard = channelInfo.GetMotherboard(referenceChannelId);
         int asic = channelInfo.GetASIC(referenceChannelId);
         int asicChan = channelInfo.GetASICChannel(referenceChannelId);
-        std::cout << "    MB: " << motherboard
+        std::cout << "    Motherboard: " << motherboard
                   << " ASIC: " << asic
-                  << " Chan: " << asicChan << std::endl;
+                  << " Channel: " << asicChan << std::endl;
         
     }
 
