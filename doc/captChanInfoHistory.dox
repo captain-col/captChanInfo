@@ -12,4 +12,24 @@ FIRST CAPTAIN FREEZE
 
 This defines the interface for determining the channel to geometry mapping.
 
+
+\section captChanInfo_v0r1p0_history Version 0.1.0
+
+Freeze information:
+   - Freeze Date: Thu Feb 25 13:31:38 2016
+   - Freeze User: mcgrew
+   - Freeze Host: boxer boxer 
+
+
+NEW FEATURES:
+
+* Add lookup for wire to geometry and back.
+
+* Add channel to wire.
+
+* Add interface for calibration constants.
+
+* Add capt-channel-lookup to let a user lookup channel information.
+
+
 */
