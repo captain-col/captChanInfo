@@ -68,7 +68,7 @@ bool CP::TChannelCalib::IsBipolarSignal(CP::TChannelId id) {
     // for now, it is hardcoded.
     if (context.IsMiniCAPTAIN()
         && 4090 <= context.GetRun()
-        && context.GetRun() < 10000000) {
+        && context.GetRun() < 6000) {
         // The X wires are disconnected for most of these runs, but return
         // "unipolar" anyway since it makes other studies easier.
         if (CP::GeomId::Captain::IsXWire(geomId)) return false;
