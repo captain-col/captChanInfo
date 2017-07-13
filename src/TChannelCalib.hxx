@@ -28,6 +28,11 @@ public:
     /// wires and PMTs are unipolar.  The induction wires are bipolar.
     bool IsBipolarSignal(CP::TChannelId id);
 
+    /// The a summary of the status flags for the channel.  This combines the
+    /// information derived during calibration with the hand modified
+    /// information in the TPC_BAD_CHANNEL_TABLE
+    int GetChannelStatus(CP::TChannelId id);
+    
     /// Get the amplifier gain constants for a channel.  The second
     /// parameter is the order of the constant.  Normally, order 0 is the
     /// pedestal, order 1 is linear, order 2 is quadratic, etc, however, the
@@ -68,7 +73,6 @@ public:
     /// Get the pulse shaping for the ASIC as a function of time.
     /// microsecond.
     double GetPulseShape(CP::TChannelId id, double t);
-
 };
 
 #endif

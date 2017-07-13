@@ -13,17 +13,54 @@
 #include <TChannelInfo.hxx>
 #include <TTPCChannelId.hxx>
 
+#include <TTPC_Bad_Channel_Table.hxx>
+
+#include <TResultSetHandle.hxx>
+#include <DatabaseUtils.hxx>
+
 #define SKIP_DATA_CALIBRATION
+
+namespace {
+    // This is slightly evil, but keep a "local" cache of the most recent
+    // calibration coefficients.
+
+    // A cache for the bad channel table.
+    CP::TEventContext gTPCBadChannelContext;
+    typedef std::map<CP::TChannelId,int> TPCBadChannelMap;
+    TPCBadChannelMap gTPCBadChannels;
+    void UpdateTPCBadChannels() {
+        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+        if (!ev) {
+            gTPCBadChannels.clear();
+            return;
+        }
+        CP::TEventContext context = ev->GetContext();
+        if (context == gTPCBadChannelContext) return;
+        gTPCBadChannelContext = context;
+        gTPCBadChannels.clear();
+        
+        CaptLog("Bad channel table update: " << gTPCBadChannelContext);
+        
+        // Get the bad channel table.
+        CP::TResultSetHandle<CP::TTPC_Bad_Channel_Table> chanTable(context);
+        Int_t numChannels(chanTable.GetNumRows());
+
+        for (int i = 0; i<numChannels; ++i) {
+            const CP::TTPC_Bad_Channel_Table* chanRow = chanTable.GetRow(i);
+            if (!chanRow) continue;
+            CP::TChannelId chanId = chanRow->GetChannelId();
+            gTPCBadChannels[chanId] = chanRow->GetChannelStatus();
+        }
+    }
+}
 
 CP::TChannelCalib::TChannelCalib() { }
 
 CP::TChannelCalib::~TChannelCalib() { } 
 
 bool CP::TChannelCalib::IsGoodChannel(CP::TChannelId id) {
-    if (id == TTPCChannelId(1,13,16)) {
-        CaptLog("Bad Channel " << id);
-        return false;
-    }
+    int status = GetChannelStatus(id);
+    if (status > 0) return false;
     return true;
 }
 
@@ -84,6 +121,14 @@ bool CP::TChannelCalib::IsBipolarSignal(CP::TChannelId id) {
     CaptError("Unknown channel: " << id);
     throw EChannelCalibUnknownType();
     return false;
+}
+
+int CP::TChannelCalib::GetChannelStatus(CP::TChannelId id) {
+    if (id.IsMCChannel()) return 0;
+    UpdateTPCBadChannels();
+    TPCBadChannelMap::iterator val = gTPCBadChannels.find(id);
+    if (val == gTPCBadChannels.end()) return -1;
+    return val->second;
 }
 
 double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
