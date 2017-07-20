@@ -93,7 +93,11 @@ bool CP::TChannelCalib::IsBipolarSignal(CP::TChannelId id) {
     /// Get the geometry id for the current wire.
     CP::TGeometryId geomId = CP::TChannelInfo::Get().GetGeometry(id);
     if (!geomId.IsValid()) {
-        CaptError("Channel is not associated with a geometry object: " << id);
+        CP::TTPCChannelId tpcId(id);
+        if (!tpcId.IsValid()) {
+            CaptError("Not a TPC Channel");
+        }
+        if (tpcId.GetCrate()<2) return true;
         return false;
     }
     if (!CP::GeomId::Captain::IsWire(geomId)) {
