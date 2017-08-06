@@ -175,10 +175,8 @@ double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
     return 0.0;
 }
 
-double CP::TChannelCalib::GetPulseShape(CP::TChannelId id, double t) {
+double CP::TChannelCalib::GetPulseShapePeakTime(CP::TChannelId id, int order) {
     if (id.IsMCChannel()) {
-        if (t < 0.0) return 0.0;
-
         TMCChannelId mc(id);
         int index = -1;
         if (mc.GetType() == 0) index = mc.GetSequence();
@@ -190,35 +188,85 @@ double CP::TChannelCalib::GetPulseShape(CP::TChannelId id, double t) {
             
         CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
         
-        // Get the rise time.
+        // Get the peaking time.
         CP::THandle<CP::TRealDatum> shapeVect
             = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shape");
         double peakingTime = (*shapeVect)[index];
-
-        // Get the rising edge shape.
-        CP::THandle<CP::TRealDatum> riseVect
-            = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shapeRise");
-        double riseShape = (*riseVect)[index];
-        
-        // Get the rising edge shape.
-        CP::THandle<CP::TRealDatum> fallVect
-            = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shapeFall");
-        double fallShape = (*fallVect)[index];
-        
-        double arg = t/peakingTime;
-        if (arg < 1.0) arg = std::pow(arg,riseShape);
-        else arg = std::pow(arg,fallShape);
-        
-        double v = (arg<40)? arg*std::exp(-arg): 0.0;
-        return v;
+        return peakingTime;
     }
 
 #ifdef SKIP_DATA_CALIBRATION
+    return 1.0*unit::microsecond;
+#endif
+    
+    CaptError("Unknown channel: " << id);
+    throw EChannelCalibUnknownType();
+    return 0.0;
+}
+
+double CP::TChannelCalib::GetPulseShapeRise(CP::TChannelId id, int order) {
+    if (id.IsMCChannel()) {
+        TMCChannelId mc(id);
+        int index = -1;
+        if (mc.GetType() == 0) index = mc.GetSequence();
+        else if (mc.GetType() == 1) index = 3;
+        else {
+            CaptError("Unknown channel: " << id);
+            throw CP::EChannelCalibUnknownType();
+        }
+            
+        // Get the rising edge shape.
+        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+        CP::THandle<CP::TRealDatum> riseVect
+            = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shapeRise");
+        double riseShape = (*riseVect)[index];
+        return riseShape;
+    }
+
+#ifdef SKIP_DATA_CALIBRATION
+    return 2.0;
+#endif
+    
+    CaptError("Unknown channel: " << id);
+    throw EChannelCalibUnknownType();
+    return 0.0;
+}
+
+double CP::TChannelCalib::GetPulseShapeFall(CP::TChannelId id, int order) {
+    if (id.IsMCChannel()) {
+        TMCChannelId mc(id);
+        int index = -1;
+        if (mc.GetType() == 0) index = mc.GetSequence();
+        else if (mc.GetType() == 1) index = 3;
+        else {
+            CaptError("Unknown channel: " << id);
+            throw CP::EChannelCalibUnknownType();
+        }
+            
+        // Get the falling edge shape.
+        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+        CP::THandle<CP::TRealDatum> fallVect
+            = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shapeFall");
+        double fallShape = (*fallVect)[index];
+        return fallShape;
+    }
+
+#ifdef SKIP_DATA_CALIBRATION
+    return 2.0;
+#endif
+    
+    CaptError("Unknown channel: " << id);
+    throw EChannelCalibUnknownType();
+    return 0.0;
+}
+
+
+double CP::TChannelCalib::GetPulseShape(CP::TChannelId id, double t) {
     if (t < 0.0) return 0.0;
 
-    double peakingTime = 1.0*unit::microsecond;
-    double riseShape = 2.0;
-    double fallShape = 2.0;
+    double peakingTime = GetPulseShapePeakTime(id);
+    double riseShape = GetPulseShapeRise(id);
+    double fallShape = GetPulseShapeFall(id);
 
     double arg = t/peakingTime;
     if (arg < 1.0) arg = std::pow(arg,riseShape);
@@ -227,11 +275,6 @@ double CP::TChannelCalib::GetPulseShape(CP::TChannelId id, double t) {
     double v = (arg<40)? arg*std::exp(-arg): 0.0;
 
     return v;
-#endif
-    
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
-    return 0.0;
 }
 
 double CP::TChannelCalib::GetTimeConstant(CP::TChannelId id, int order) {

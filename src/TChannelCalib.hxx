@@ -73,6 +73,22 @@ public:
     /// Get the pulse shaping for the ASIC as a function of time.
     /// microsecond.
     double GetPulseShape(CP::TChannelId id, double t);
+
+    /// Get the peaking time for the ASIC.  This shouldn't be used directly.
+    /// Access the pulse shape through GetPulseShape.
+    double GetPulseShapePeakTime(CP::TChannelId id, int order = 0);
+
+    /// Get the shape factor for the rising edge of the ASIC shaping.  This
+    /// shouldn't be used directly.  Access the pulse shape through
+    /// GetPulseShape.
+    double GetPulseShapeRise(CP::TChannelId id, int order = 0);
+    
+    /// Get the shape factor for the fallng edge of the ASIC shaping.  This
+    /// shouldn't be used directly.  Access the pulse shape through
+    /// GetPulseShape.
+    double GetPulseShapeFall(CP::TChannelId id, int order = 0);
+    
+
 };
 
 #endif
