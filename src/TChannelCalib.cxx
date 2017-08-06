@@ -313,10 +313,12 @@ double CP::TChannelCalib::GetDigitizerConstant(CP::TChannelId id, int order) {
         return 0.0;
     }
 
-#ifdef SKIP_DATA_CALIBRATION
+    // This is fixed for the data since we use an injected pulse with a known
+    // charge to calibrate the ASIC and the digitizer as a combined system.
+    // The precise value doesn't matter, so we are using the design spec.  The
+    // actual digitizers vary by about 20%.
     if (order == 1) return 2.5/unit::mV;
     return 0.0;
-#endif
 
     CaptError("Unknown channel: " << id);
     throw EChannelCalibUnknownType();
