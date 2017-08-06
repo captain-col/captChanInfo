@@ -275,11 +275,13 @@ double CP::TChannelCalib::GetTimeConstant(CP::TChannelId id, int order) {
         return 0.0;
     }
 
-#ifdef SKIP_DATA_CALIBRATION
+    /// The time offset frore the TPC trigger is fixed to 3200 samples in
+    /// software.  This isn't going to change, so just provide the fixed
+    /// value.  The sample rate of 500 ns/sample is fixed in hardware against
+    /// a very good clock, so it is also fixed.
     if (order == 0) return -1.600*unit::ms;
     if (order == 1) return 500.0*unit::ns;
     return 0.0;
-#endif
 
     CaptError("Unknown channel: " << id);
     throw EChannelCalibUnknownType();
