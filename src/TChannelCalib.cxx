@@ -67,20 +67,10 @@ CP::TChannelCalib::~TChannelCalib() { }
 
 bool CP::TChannelCalib::IsGoodChannel(CP::TChannelId id) {
     int status = GetChannelStatus(id);
-    if (status > 0) return false;
-
-    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
-    if (!ev) {
-        CaptError("No event is loaded so context cannot be set.");
-        throw EChannelCalibUnknownType();
-    }
-    CP::TEventContext context = ev->GetContext();
-    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
-    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
-    if (table.GetNumRows()<10) return true;  // Empty table, so all good.
-    if (!row) return false;                  // Missing row, so bad.
-    if (row->GetChannelStatus()>0) return false;
-
+    status &= ~(TTPC_Channel_Calib_Table::kLowGain
+                |TTPC_Channel_Calib_Table::kHighGain
+                |TTPC_Channel_Calib_Table::kBadPeak);
+    if (status != 0) return false;
     return true;
 }
 
@@ -151,8 +141,24 @@ int CP::TChannelCalib::GetChannelStatus(CP::TChannelId id) {
     if (id.IsMCChannel()) return 0;
     UpdateTPCBadChannels();
     TPCBadChannelMap::iterator val = gTPCBadChannels.find(id);
-    if (val == gTPCBadChannels.end()) return 0;
-    return val->second;
+    if (val != gTPCBadChannels.end()) return val->second;
+
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+
+    CP::TEventContext context = ev->GetContext();
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
+
+    // Empty table, so all good.
+    if (table.GetNumRows()<10) return 0;
+
+    if (!row) return CP::TTPC_Channel_Calib_Table::kNoSignal;
+
+    return row->GetChannelStatus();
 }
 
 double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
