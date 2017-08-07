@@ -14,15 +14,15 @@
 #include <TTPCChannelId.hxx>
 
 #include <TTPC_Bad_Channel_Table.hxx>
+#include <TTPC_Channel_Calib_Table.hxx>
 
 #include <TResultSetHandle.hxx>
 #include <DatabaseUtils.hxx>
 
-#define SKIP_DATA_CALIBRATION
-
 namespace {
     // This is slightly evil, but keep a "local" cache of the most recent
-    // calibration coefficients.
+    // calibration coefficients.  This prevents exposing the cache to the
+    // TChannelCalib users, and
 
     // A cache for the bad channel table.
     CP::TEventContext gTPCBadChannelContext;
@@ -39,8 +39,6 @@ namespace {
         gTPCBadChannelContext = context;
         gTPCBadChannels.clear();
         
-        CaptLog("Bad channel table update: " << gTPCBadChannelContext);
-        
         // Get the bad channel table.
         CP::TResultSetHandle<CP::TTPC_Bad_Channel_Table> chanTable(context);
         Int_t numChannels(chanTable.GetNumRows());
@@ -51,7 +49,16 @@ namespace {
             CP::TChannelId chanId = chanRow->GetChannelId();
             gTPCBadChannels[chanId] = chanRow->GetChannelStatus();
         }
+        
+        CaptLog("Bad channel table update: " << gTPCBadChannelContext);
+        
     }
+
+    // A cache for the tpc pulse gain and shape calibration table
+    CP::TEventContext gTPCChannelCalibContext;
+    typedef std::map<CP::TChannelId,int> TPCChannelCalibMap;
+    TPCChannelCalibMap gTPCChannelCalib;
+    
 }
 
 CP::TChannelCalib::TChannelCalib() { }
@@ -61,6 +68,19 @@ CP::TChannelCalib::~TChannelCalib() { }
 bool CP::TChannelCalib::IsGoodChannel(CP::TChannelId id) {
     int status = GetChannelStatus(id);
     if (status > 0) return false;
+
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
+    if (table.GetNumRows()<10) return true;  // Empty table, so all good.
+    if (!row) return false;                  // Missing row, so bad.
+    if (row->GetChannelStatus()>0) return false;
+
     return true;
 }
 
@@ -72,7 +92,7 @@ bool CP::TChannelCalib::IsBipolarSignal(CP::TChannelId id) {
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
@@ -122,7 +142,7 @@ bool CP::TChannelCalib::IsBipolarSignal(CP::TChannelId id) {
     if (CP::GeomId::Captain::IsXWire(geomId)) return false;
     return true;
 
-    CaptError("Unknown channel: " << id);
+    CaptWarn("Unknown channel: " << id);
     throw EChannelCalibUnknownType();
     return false;
 }
@@ -131,11 +151,18 @@ int CP::TChannelCalib::GetChannelStatus(CP::TChannelId id) {
     if (id.IsMCChannel()) return 0;
     UpdateTPCBadChannels();
     TPCBadChannelMap::iterator val = gTPCBadChannels.find(id);
-    if (val == gTPCBadChannels.end()) return -1;
+    if (val == gTPCBadChannels.end()) return 0;
     return val->second;
 }
 
 double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+        
     if (id.IsMCChannel()) {
         TMCChannelId mc(id);
 
@@ -143,19 +170,11 @@ double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
-        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
-        
-        if (order == 0) {
-            // Get the pedestal
-            CP::THandle<CP::TRealDatum> pedVect
-                = ev->Get<CP::TRealDatum>("~/truth/elecSimple/pedestal");
-            return (*pedVect)[index];
-        }
-        else if (order == 1) {
+        if (order == 1) {
             // Get the gain
             CP::THandle<CP::TRealDatum> gainVect
                 = ev->Get<CP::TRealDatum>("~/truth/elecSimple/gain");
@@ -165,29 +184,37 @@ double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
         return 0.0;
     }
 
-#ifdef SKIP_DATA_CALIBRATION
-    if (order == 1) return (14.0*unit::mV/unit::fC);
-    return 2048.0;
-#endif
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
 
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
+    if (!row) {
+        CaptWarn("Unknown channel: " << id);
+        if (order == 1) return (14.0*unit::mV/unit::fC);
+        return 0.0;
+    }
+
+    if (order == 1) return row->GetASICGain()*unit::mV/unit::fC;
     return 0.0;
 }
 
 double CP::TChannelCalib::GetPulseShapePeakTime(CP::TChannelId id, int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+
     if (id.IsMCChannel()) {
         TMCChannelId mc(id);
         int index = -1;
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
-        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
-        
         // Get the peaking time.
         CP::THandle<CP::TRealDatum> shapeVect
             = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shape");
@@ -195,69 +222,87 @@ double CP::TChannelCalib::GetPulseShapePeakTime(CP::TChannelId id, int order) {
         return peakingTime;
     }
 
-#ifdef SKIP_DATA_CALIBRATION
-    return 1.0*unit::microsecond;
-#endif
-    
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
-    return 0.0;
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
+
+    if (!row) {
+        CaptWarn("Unknown channel: " << id);
+        return 1.0*unit::microsecond;
+    }
+
+    return row->GetASICPeakTime()*unit::ns;
 }
 
 double CP::TChannelCalib::GetPulseShapeRise(CP::TChannelId id, int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+
     if (id.IsMCChannel()) {
         TMCChannelId mc(id);
         int index = -1;
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
         // Get the rising edge shape.
-        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
         CP::THandle<CP::TRealDatum> riseVect
             = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shapeRise");
         double riseShape = (*riseVect)[index];
         return riseShape;
     }
 
-#ifdef SKIP_DATA_CALIBRATION
-    return 2.0;
-#endif
-    
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
-    return 0.0;
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
+
+    if (!row) {
+        CaptWarn("Unknown channel: " << id);
+        return 1.5;
+    }
+
+    return row->GetASICRiseShape();
 }
 
 double CP::TChannelCalib::GetPulseShapeFall(CP::TChannelId id, int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+
     if (id.IsMCChannel()) {
         TMCChannelId mc(id);
         int index = -1;
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
         // Get the falling edge shape.
-        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
         CP::THandle<CP::TRealDatum> fallVect
             = ev->Get<CP::TRealDatum>("~/truth/elecSimple/shapeFall");
         double fallShape = (*fallVect)[index];
         return fallShape;
     }
 
-#ifdef SKIP_DATA_CALIBRATION
-    return 2.0;
-#endif
-    
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
-    return 0.0;
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
+
+    if (!row) {
+        CaptWarn("Unknown channel: " << id);
+        return 1.7;
+    }
+
+    return row->GetASICFallShape();
 }
 
 
@@ -285,7 +330,7 @@ double CP::TChannelCalib::GetTimeConstant(CP::TChannelId id, int order) {
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
@@ -325,10 +370,6 @@ double CP::TChannelCalib::GetTimeConstant(CP::TChannelId id, int order) {
     if (order == 0) return -1.600*unit::ms;
     if (order == 1) return 500.0*unit::ns;
     return 0.0;
-
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
-    return 0.0;
 }
 
 double CP::TChannelCalib::GetDigitizerConstant(CP::TChannelId id, int order) {
@@ -339,14 +380,17 @@ double CP::TChannelCalib::GetDigitizerConstant(CP::TChannelId id, int order) {
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) index = 3;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
         CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
         
         if (order == 0) {
-            return 0.0;
+            // Get the pedestal
+            CP::THandle<CP::TRealDatum> pedVect
+                = ev->Get<CP::TRealDatum>("~/truth/elecSimple/pedestal");
+            return (*pedVect)[index];
         }
         else if (order == 1) {
             // Get the digitizer slope
@@ -363,10 +407,25 @@ double CP::TChannelCalib::GetDigitizerConstant(CP::TChannelId id, int order) {
     // The precise value doesn't matter, so we are using the design spec.  The
     // actual digitizers vary by about 20%.
     if (order == 1) return 2.5/unit::mV;
-    return 0.0;
+    else if (order == 0) {
+        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+        if (!ev) {
+            CaptError("No event is loaded so context cannot be set.");
+            throw EChannelCalibUnknownType();
+        }
+        CP::TEventContext context = ev->GetContext();
 
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
+        CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+        const CP::TTPC_Channel_Calib_Table* row
+            = table.GetRowByIndex(id.AsUInt());
+        
+        if (!row) {
+            CaptWarn("Unknown channel: " << id);
+            return 2048;
+        }
+        
+        return row->GetDigitizerPedestal();
+    }
     return 0.0;
 }
 
@@ -398,7 +457,7 @@ double CP::TChannelCalib::GetCollectionEfficiency(CP::TChannelId id) {
         if (mc.GetType() == 0) index = mc.GetSequence();
         else if (mc.GetType() == 1) return 1.0;
         else {
-            CaptError("Unknown channel: " << id);
+            CaptWarn("Unknown channel: " << id);
             throw CP::EChannelCalibUnknownType();
         }
             
@@ -422,13 +481,6 @@ double CP::TChannelCalib::GetCollectionEfficiency(CP::TChannelId id) {
         }
     }
 
-#ifdef SKIP_DATA_CALIBRATION
-    return 1.0;
-#endif
-
-
-    CaptError("Unknown channel: " << id);
-    throw EChannelCalibUnknownType();
     return 1.0;
 }
 

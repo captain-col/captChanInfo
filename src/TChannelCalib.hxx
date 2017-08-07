@@ -33,11 +33,12 @@ public:
     /// information in the TPC_BAD_CHANNEL_TABLE
     int GetChannelStatus(CP::TChannelId id);
     
-    /// Get the amplifier gain constants for a channel.  The second
-    /// parameter is the order of the constant.  Normally, order 0 is the
-    /// pedestal, order 1 is linear, order 2 is quadratic, etc, however, the
-    /// definitions depend on the calibration model.  For instance, in the
-    /// future, we might use model with a logarithmic saturation.
+    /// Get the amplifier gain constants for a channel.  The second parameter
+    /// is the order of the constant.  Normally, order 0 is the offset for the
+    /// charge calibration (always zero), order 1 is linear, order 2 is
+    /// quadratic, etc, however, the definitions depend on the calibration
+    /// model.  For instance, in the future, we might use model with a
+    /// logarithmic saturation.
     ///
     /// In the TPC electronics, the linear term has units of
     /// (voltage)/(charge).
@@ -49,9 +50,10 @@ public:
     /// order 0 is the pedestal, order 1 is linear, order 2 is quadratic, etc.
     double GetTimeConstant(CP::TChannelId id, int order=1);
 
-    /// Get the digitizer slope of ADC/(input voltage).  The second parameter
-    /// is the order of the constant.  Normally, order 0 is the offset (always
-    /// zero), order 1 is linear, order 2 is quadratic, etc.
+    /// Get the digitizer constant to convert ADC to voltage.  The second
+    /// parameter is the order of the constant.  Normally, order 0 is the
+    /// digitizer pedestal (usually ~2048 or ~450), order 1 is linear
+    /// (ADC/volt), order 2 is quadratic, etc.
     double GetDigitizerConstant(CP::TChannelId id, int order=1);
 
     /// Get the electron lifetime.
@@ -87,7 +89,6 @@ public:
     /// shouldn't be used directly.  Access the pulse shape through
     /// GetPulseShape.
     double GetPulseShapeFall(CP::TChannelId id, int order = 0);
-    
 
 };
 
