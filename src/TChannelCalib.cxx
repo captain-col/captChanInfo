@@ -203,6 +203,33 @@ double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
     return 0.0;
 }
 
+double CP::TChannelCalib::GetAveragePulseShapePeakTime(CP::TChannelId id,
+                                                       int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+
+    if (id.IsMCChannel()) return GetPulseShapePeakTime(id,order);
+
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    
+    Int_t numChannels(table.GetNumRows());
+
+    double peakTime = 0.0;
+    double count = 0.0;
+    for (int i = 0; i<numChannels; ++i) {
+        const CP::TTPC_Channel_Calib_Table* row = table.GetRow(i);
+        peakTime += row->GetASICPeakTime()*unit::ns;
+        count += 1.0;
+    }
+    peakTime /= count;
+    
+    return peakTime;
+}
+
 double CP::TChannelCalib::GetPulseShapePeakTime(CP::TChannelId id, int order) {
     CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
     if (!ev) {
@@ -239,6 +266,34 @@ double CP::TChannelCalib::GetPulseShapePeakTime(CP::TChannelId id, int order) {
     return row->GetASICPeakTime()*unit::ns;
 }
 
+double CP::TChannelCalib::GetAveragePulseShapeRise(CP::TChannelId id,
+                                                   int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+    
+    if (id.IsMCChannel()) return GetPulseShapeRise(id,order);
+
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    
+    Int_t numChannels(table.GetNumRows());
+
+    double riseShape = 0.0;
+    double count = 0.0;
+    for (int i = 0; i<numChannels; ++i) {
+        const CP::TTPC_Channel_Calib_Table* row = table.GetRow(i);
+        riseShape += row->GetASICRiseShape()*unit::ns;
+        count += 1.0;
+    }
+
+    riseShape /= count;
+
+    return riseShape;
+}
+
 double CP::TChannelCalib::GetPulseShapeRise(CP::TChannelId id, int order) {
     CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
     if (!ev) {
@@ -273,6 +328,34 @@ double CP::TChannelCalib::GetPulseShapeRise(CP::TChannelId id, int order) {
     }
 
     return row->GetASICRiseShape();
+}
+
+double CP::TChannelCalib::GetAveragePulseShapeFall(CP::TChannelId id,
+                                                   int order) {
+    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+    if (!ev) {
+        CaptError("No event is loaded so context cannot be set.");
+        throw EChannelCalibUnknownType();
+    }
+    CP::TEventContext context = ev->GetContext();
+    
+    if (id.IsMCChannel()) return GetPulseShapeFall(id,order);
+
+    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+    
+    Int_t numChannels(table.GetNumRows());
+
+    double fallShape = 0.0;
+    double count = 0.0;
+    for (int i = 0; i<numChannels; ++i) {
+        const CP::TTPC_Channel_Calib_Table* row = table.GetRow(i);
+        fallShape += row->GetASICFallShape()*unit::ns;
+        count += 1.0;
+    }
+
+    fallShape /= count;
+
+    return fallShape;
 }
 
 double CP::TChannelCalib::GetPulseShapeFall(CP::TChannelId id, int order) {
@@ -325,7 +408,23 @@ double CP::TChannelCalib::GetPulseShape(CP::TChannelId id, double t) {
     
     double v = (arg<40)? arg*std::exp(-arg): 0.0;
 
-    return v;
+    return 2.71828*v;
+}
+
+double CP::TChannelCalib::GetAveragePulseShape(CP::TChannelId id, double t) {
+    if (t < 0.0) return 0.0;
+
+    double peakingTime = GetAveragePulseShapePeakTime(id);
+    double riseShape = GetAveragePulseShapeRise(id);
+    double fallShape = GetAveragePulseShapeFall(id);
+
+    double arg = t/peakingTime;
+    if (arg < 1.0) arg = std::pow(arg,riseShape);
+    else arg = std::pow(arg,fallShape);
+    
+    double v = (arg<40)? arg*std::exp(-arg): 0.0;
+
+    return 2.71828*v;
 }
 
 double CP::TChannelCalib::GetTimeConstant(CP::TChannelId id, int order) {
