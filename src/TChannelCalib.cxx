@@ -143,6 +143,11 @@ int CP::TChannelCalib::GetChannelStatus(CP::TChannelId id) {
     TPCBadChannelMap::iterator val = gTPCBadChannels.find(id);
     if (val != gTPCBadChannels.end()) return val->second;
 
+#ifdef GET_CALIBRATION_STATUS
+    // Get the status of the calibration fit for this channel.  This should
+    // only be enabled after the calibration fitting routine has settled on a
+    // good set of statis bits.
+    
     CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
     if (!ev) {
         CaptError("No event is loaded so context cannot be set.");
@@ -159,6 +164,9 @@ int CP::TChannelCalib::GetChannelStatus(CP::TChannelId id) {
     if (!row) return CP::TTPC_Channel_Calib_Table::kNoSignal;
 
     return row->GetChannelStatus();
+#else
+    return 0;
+#endif
 }
 
 double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
