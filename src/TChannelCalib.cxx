@@ -19,6 +19,8 @@
 #include <TResultSetHandle.hxx>
 #include <DatabaseUtils.hxx>
 
+#define GET_CALIBRATION_STATUS
+
 namespace {
     // This is slightly evil, but keep a "local" cache of the most recent
     // calibration coefficients.  This prevents exposing the cache to the
@@ -69,7 +71,8 @@ bool CP::TChannelCalib::IsGoodChannel(CP::TChannelId id) {
     int status = GetChannelStatus(id);
     status &= ~(TTPC_Channel_Calib_Table::kLowGain
                 |TTPC_Channel_Calib_Table::kHighGain
-                |TTPC_Channel_Calib_Table::kBadPeak);
+                |TTPC_Channel_Calib_Table::kBadPeak
+		|TTPC_Channel_Calib_Table::kBadFit);
     if (status != 0) return false;
     return true;
 }
