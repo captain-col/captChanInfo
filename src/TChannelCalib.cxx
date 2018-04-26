@@ -18,6 +18,7 @@
 
 #include <TResultSetHandle.hxx>
 #include <DatabaseUtils.hxx>
+#include <TDbi.hxx>
 
 #define GET_CALIBRATION_STATUS
 
@@ -28,8 +29,10 @@ namespace {
 
     // A cache for the bad channel table.
     CP::TEventContext gTPCBadChannelContext;
+    CP::TEventContext gMCBadChannelContext;
     typedef std::map<CP::TChannelId,int> TPCBadChannelMap;
     TPCBadChannelMap gTPCBadChannels;
+    TPCBadChannelMap gMCBadChannels;
     void UpdateTPCBadChannels() {
         CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
         if (!ev) {
@@ -37,12 +40,13 @@ namespace {
             return;
         }
         CP::TEventContext context = ev->GetContext();
-        if (context == gTPCBadChannelContext) return;
+	std::time_t t2 = std::time(0);
+	context.SetTimeStamp(t2);
+        if (context == gTPCBadChannelContext) {return;};
         gTPCBadChannelContext = context;
         gTPCBadChannels.clear();
-        
         // Get the bad channel table.
-        CP::TResultSetHandle<CP::TTPC_Bad_Channel_Table> chanTable(context);
+	CP::TResultSetHandle<CP::TTPC_Bad_Channel_Table> chanTable(context);
         Int_t numChannels(chanTable.GetNumRows());
 
         for (int i = 0; i<numChannels; ++i) {
@@ -53,6 +57,34 @@ namespace {
         }
         
         CaptLog("Bad channel table update: " << gTPCBadChannelContext);
+        
+    }
+
+    void UpdateMCBadChannels() {
+        CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+        if (!ev) {
+            gMCBadChannels.clear();
+            return;
+        }
+        CP::TEventContext context = ev->GetContext();
+	std::time_t t2 = std::time(0);
+	context.SetTimeStamp(t2);
+        if (context == gMCBadChannelContext) {return;};
+        gMCBadChannelContext = context;
+        gMCBadChannels.clear();
+        // Get the bad channel table.
+	CP::TResultSetHandle<CP::TTPC_Bad_Channel_Table> chanTable(context);
+        Int_t numChannels(chanTable.GetNumRows());
+
+        for (int i = 0; i<numChannels; ++i) {
+            const CP::TTPC_Bad_Channel_Table* chanRow = chanTable.GetRow(i);
+            if (!chanRow) continue;
+	    //chanRow->PrintMC();
+            CP::TChannelId chanId = chanRow->GetChannelMCId();
+            gMCBadChannels[chanId] = chanRow->GetChannelStatus();
+        }
+        
+        CaptLog("Bad channel table update: " << gMCBadChannelContext);
         
     }
 
@@ -141,35 +173,44 @@ bool CP::TChannelCalib::IsBipolarSignal(CP::TChannelId id) {
 }
 
 int CP::TChannelCalib::GetChannelStatus(CP::TChannelId id) {
-    if (id.IsMCChannel()) return 0;
-    UpdateTPCBadChannels();
-    TPCBadChannelMap::iterator val = gTPCBadChannels.find(id);
-    if (val != gTPCBadChannels.end()) return val->second;
+    if (id.IsMCChannel()) {
+	//return 0;
+	TPCBadChannelMap::iterator val = gMCBadChannels.find(id);
+	UpdateMCBadChannels();
+
+	if (val != gMCBadChannels.end()) return val->second;
+	else return 0;
+    }
+    else {
+	UpdateTPCBadChannels();
+	TPCBadChannelMap::iterator val = gTPCBadChannels.find(id);
+	if (val != gTPCBadChannels.end()) return val->second;
 
 #ifdef GET_CALIBRATION_STATUS
-    // Get the status of the calibration fit for this channel.  This should
-    // only be enabled after the calibration fitting routine has settled on a
-    // good set of statis bits.
+	// Get the status of the calibration fit for this channel.  This should
+	// only be enabled after the calibration fitting routine has settled on a
+	// good set of statis bits.
     
-    CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
-    if (!ev) {
-        CaptError("No event is loaded so context cannot be set.");
-        throw EChannelCalibUnknownType();
-    }
+	CP::TEvent* ev = CP::TEventFolder::GetCurrentEvent();
+	if (!ev) {
+	    CaptError("No event is loaded so context cannot be set.");
+	    throw EChannelCalibUnknownType();
+	}
 
-    CP::TEventContext context = ev->GetContext();
-    CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
-    const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
-
-    // Empty table, so all good.
-    if (table.GetNumRows()<10) return 0;
-
-    if (!row) return CP::TTPC_Channel_Calib_Table::kNoSignal;
-
-    return row->GetChannelStatus();
+	CP::TEventContext context = ev->GetContext();
+	CP::TResultSetHandle<CP::TTPC_Channel_Calib_Table> table(context);
+	const CP::TTPC_Channel_Calib_Table* row = table.GetRowByIndex(id.AsUInt());
+	
+	// Empty table, so all good.
+	if (table.GetNumRows()<10) return 0;
+	
+	if (!row) return CP::TTPC_Channel_Calib_Table::kNoSignal;
+    
+	return row->GetChannelStatus();
 #else
-    return 0;
+	return 0;
 #endif
+    }
 }
 
 double CP::TChannelCalib::GetGainConstant(CP::TChannelId id, int order) {
