@@ -40,8 +40,6 @@ namespace {
             return;
         }
         CP::TEventContext context = ev->GetContext();
-	std::time_t t2 = std::time(0);
-	context.SetTimeStamp(t2);
         if (context == gTPCBadChannelContext) {return;};
         gTPCBadChannelContext = context;
         gTPCBadChannels.clear();
