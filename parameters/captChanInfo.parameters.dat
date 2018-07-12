@@ -1,0 +1,3 @@
+The name of a file of wires to be ignored.
+
+< captChanInfo.wire.ignore.file = wires-ignored.txt >

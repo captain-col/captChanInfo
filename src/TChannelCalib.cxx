@@ -20,6 +20,9 @@
 #include <DatabaseUtils.hxx>
 #include <TDbi.hxx>
 
+#include <sstream>
+#include <fstream>
+
 #define GET_CALIBRATION_STATUS
 
 namespace {
@@ -91,6 +94,43 @@ namespace {
     typedef std::map<CP::TChannelId,int> TPCChannelCalibMap;
     TPCChannelCalibMap gTPCChannelCalib;
     
+    // The list of wires to be ignored
+    std::set< std::pair<int,int> > gIgnoredWireSet;
+    void UpdateIgnoredWireSet() {
+        if (!CP::TRuntimeParameters::Get().HasParameter(
+                "captChanInfo.wire.ignore.file")) {
+            CaptError("File parameter is missing");
+            return;
+        }
+        std::string file
+            = CP::TRuntimeParameters::Get().GetParameterS(
+                "captChanInfo.wire.ignore.file");
+        const char* root = std::getenv("CAPTCHANINFOROOT");
+        if (!root) {
+            CaptError("Missing CAPTCHANINFOROOT environment variable");
+            return;
+        }
+        file = std::string(root) + "/parameters/" + file;
+        gIgnoredWireSet.clear();
+        gIgnoredWireSet.insert(std::make_pair(1,1));
+        std::ifstream input(file.c_str());
+        if (!input.is_open()) {
+            CaptError("Unable to read " << file);
+            std::exit(1);
+        }
+        
+        CaptLog("Read ignored wires from " << file);
+        
+        std::string line;
+        while (std::getline(input,line)) {
+            line = line.substr(0,line.find("#"));
+            if (line.empty()) continue;
+            std::istringstream parseLine(line);
+            std::pair<int,int> wire;
+            parseLine >> wire.first >> wire.second;
+            gIgnoredWireSet.insert(wire);
+        }
+    }
 }
 
 CP::TChannelCalib::TChannelCalib() { }
@@ -104,6 +144,25 @@ bool CP::TChannelCalib::IsGoodChannel(CP::TChannelId id) {
                 |TTPC_Channel_Calib_Table::kBadPeak
 		|TTPC_Channel_Calib_Table::kBadFit);
     if (status != 0) return false;
+    return true;
+}
+
+bool CP::TChannelCalib::IsGoodWire(CP::TChannelId id) {
+    /// Get the geometry id for the current wire.
+    CP::TGeometryId geomId = CP::TChannelInfo::Get().GetGeometry(id);
+    return IsGoodWire(geomId);
+}
+
+bool CP::TChannelCalib::IsGoodWire(CP::TGeometryId geomId) {
+    if (!geomId.IsValid()) {
+        CaptError("Not a valid Channel");
+        return false;
+    }
+    if (!CP::GeomId::Captain::IsWire(geomId)) {
+        CaptError("Channel is not a wire: " << geomId);
+        return false;
+    }
+    if (gIgnoredWireSet.empty()) UpdateIgnoredWireSet();
     return true;
 }
 

@@ -6,6 +6,7 @@
 namespace CP {
     class TChannelCalib;
     class TChannelId;
+    class TGeometryId;
 };
 
 namespace CP {
@@ -23,6 +24,10 @@ public:
 
     /// This is true if the channel is considered good.
     bool IsGoodChannel(CP::TChannelId id);
+
+    /// This is true if the wire is working in the detector.
+    bool IsGoodWire(CP::TGeometryId id); 
+    bool IsGoodWire(CP::TChannelId id); 
 
     /// This returns true if the signal is a bipolar signal.  The collection
     /// wires and PMTs are unipolar.  The induction wires are bipolar.

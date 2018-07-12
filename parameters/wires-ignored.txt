@@ -1,0 +1,7 @@
+################################################################### This
+#file contains a set of wires identified by the plane and wire number that
+#should be ignored in both data and MC.
+
+# Plane (x: 0 u: 1 v: 2) wire (0-333)
+
+-1 -1
