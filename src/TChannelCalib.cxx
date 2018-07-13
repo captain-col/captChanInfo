@@ -154,15 +154,12 @@ bool CP::TChannelCalib::IsGoodWire(CP::TChannelId id) {
 }
 
 bool CP::TChannelCalib::IsGoodWire(CP::TGeometryId geomId) {
-    if (!geomId.IsValid()) {
-        CaptError("Not a valid Channel");
-        return false;
-    }
-    if (!CP::GeomId::Captain::IsWire(geomId)) {
-        CaptError("Channel is not a wire: " << geomId);
-        return false;
-    }
+    if (!geomId.IsValid()) return false;
+    if (!CP::GeomId::Captain::IsWire(geomId)) return false;
     if (gIgnoredWireSet.empty()) UpdateIgnoredWireSet();
+    std::pair<int,int> wire(CP::GeomId::Captain::GetWirePlane(geomId),
+                            CP::GeomId::Captain::GetWireNumber(geomId));
+    if (gIgnoredWireSet.find(wire) != gIgnoredWireSet.end()) return false;
     return true;
 }
 

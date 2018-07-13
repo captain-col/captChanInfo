@@ -1,7 +1,19 @@
-################################################################### This
-#file contains a set of wires identified by the plane and wire number that
-#should be ignored in both data and MC.
+###############################################################################
+# This file contains a set of wires identified by the plane and wire
+# number that should be ignored in both data and MC.  There should be
+# one wire to be ignored on each line, the first column is the plane
+# number, and the second column is the wire number.  The plane and
+# wire number uses the conventions of CaptGeomId.hxx.
 
-# Plane (x: 0 u: 1 v: 2) wire (0-333)
+# NOTE: This could quite reasonably be saved as a data base table, but
+# since miniCAPTAIN has a very limited time period, the same wires
+# need to be eliminated in both data and the corresponding MC, and the
+# control sample used to determine the ignored wires come from the
+# entire data period, it's been put into a single file.  The
+# TChannelCalib interface to this [IsGoodWire()] still assumes that
+# the list of wires might change with every run, so this can be
+# "fixed" in the future if it turns out to be necessary.
+
+# Plane (x: 0 v: 1 u: 2) Wire (0-333)
 
 -1 -1

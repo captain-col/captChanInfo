@@ -22,11 +22,20 @@ public:
     TChannelCalib();
     ~TChannelCalib();
 
-    /// This is true if the channel is considered good.
+    /// This is true if the channel is considered good.  This gives the status
+    /// of an electronics channel based on calibrations (usually done using an
+    /// injected pulse).  An electronics channel can be working independent of
+    /// whether it's attached to a wire, or the wire being good.
     bool IsGoodChannel(CP::TChannelId id);
 
-    /// This is true if the wire is working in the detector.
+    /// This is true if the wire is working in the detector.  This gives the
+    /// status of whether a wire is correctly connected to a channel.  A
+    /// channel can be good, but the wire still won't read charge.  For
+    /// example, the capacitor might be bad.
     bool IsGoodWire(CP::TGeometryId id); 
+
+    /// Determine if the wire attached to this channel is good.  Note channels
+    /// not attached to an actual wire automatically return false.
     bool IsGoodWire(CP::TChannelId id); 
 
     /// This returns true if the signal is a bipolar signal.  The collection
