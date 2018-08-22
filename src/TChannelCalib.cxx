@@ -68,11 +68,18 @@ namespace {
             return;
         }
         CP::TEventContext context = ev->GetContext();
-	std::time_t t2 = std::time(0);
-	context.SetTimeStamp(t2);
-        if (context == gMCBadChannelContext) {return;};
+        if (context == gMCBadChannelContext) return;
+        CaptLog("Bad channel table update " << context);
+        
         gMCBadChannelContext = context;
         gMCBadChannels.clear();
+
+        // Make sure the context has a valid time.  Use the current time!
+        if (context.GetTimeStamp() == CP::TEventContext::Invalid) {
+            std::time_t t2 = std::time(0);
+            context.SetTimeStamp(t2);
+        }
+
         // Get the bad channel table.
 	CP::TResultSetHandle<CP::TTPC_Bad_Channel_Table> chanTable(context);
         Int_t numChannels(chanTable.GetNumRows());
@@ -84,8 +91,6 @@ namespace {
             CP::TChannelId chanId = chanRow->GetChannelMCId();
             gMCBadChannels[chanId] = chanRow->GetChannelStatus();
         }
-        
-        CaptLog("Bad channel table update: " << gMCBadChannelContext);
         
     }
 
